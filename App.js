@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   SafeAreaView,
@@ -11,8 +10,12 @@ import {
   Platform,
   StatusBar,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
+import { SvgXml } from "react-native-svg";
+import logoSvg from "./assets/brand/logoSvg";
 
 const COLORS = {
   background: "#080808",
@@ -29,8 +32,7 @@ const COLORS = {
 
 const FONT = {
   regular: "AlteHaasGrotesk",
-  bold: "AlteHaasGroteskBold",
-  italic: "AlteHaasGroteskItalic",
+  bold: "AlteHaasGrotesk-Bold",
 };
 
 const INITIAL_CHAT = {
@@ -66,24 +68,15 @@ const SUGGESTIONS = [
   },
 ];
 
-function AppText({
-  children,
-  style,
-  weight = "regular",
-  italic = false,
-  ...props
-}) {
+function AppText({ children, style, weight = "regular", italic = false, ...props }) {
+  // Italic support removed per project spec; ignore italic prop
   return (
     <Text
       {...props}
       style={[
         {
           color: COLORS.white,
-          fontFamily: italic
-            ? FONT.italic
-            : weight === "bold"
-            ? FONT.bold
-            : FONT.regular,
+          fontFamily: weight === "bold" ? FONT.bold : FONT.regular,
         },
         style,
       ]}
@@ -107,14 +100,26 @@ function IconButton({ name, onPress, size = 20, color = COLORS.text, style }) {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    AlteHaasGrotesk: require("./assets/fonts/AlteHaasGroteskRegular.ttf"),
+    "AlteHaasGrotesk-Bold": require("./assets/fonts/AlteHaasGroteskBold.ttf"),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.background }}>
+        <ActivityIndicator color={COLORS.red} />
+      </View>
+    );
+  }
+
   const [chats, setChats] = useState([INITIAL_CHAT]);
   const [activeId, setActiveId] = useState("welcome");
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const activeChat =
-    chats.find((chat) => chat.id === activeId) || chats[0];
+  const activeChat = chats.find((chat) => chat.id === activeId) || chats[0];
 
   function createChat() {
     const chat = {
@@ -147,10 +152,7 @@ export default function App() {
 
         return {
           ...chat,
-          title: firstMessage
-            ? message.slice(0, 30) +
-              (message.length > 30 ? "..." : "")
-            : chat.title,
+          title: firstMessage ? message.slice(0, 30) + (message.length > 30 ? "..." : "") : chat.title,
           messages: [
             ...chat.messages,
             userMessage,
@@ -190,22 +192,18 @@ export default function App() {
                 <AppText weight="bold" style={styles.brandName}>
                   Vex<Text style={{ color: COLORS.red }}>AI</Text>
                 </AppText>
-                <AppText style={styles.brandCaption}>
-                  INTELLIGENCE, REFINED
-                </AppText>
+                <AppText style={styles.brandCaption}>INTELLIGENCE, REFINED</AppText>
               </View>
-              <IconButton
-                name="chevron-back-outline"
-                size={19}
-                onPress={() => setSidebarOpen(false)}
-              />
+
+              {/* Render original SVG logo - preserved exactly as provided */}
+              <View style={{ marginLeft: 6 }}>
+                <SvgXml xml={logoSvg} width={72} />
+              </View>
+
+              <IconButton name="chevron-back-outline" size={19} onPress={() => setSidebarOpen(false)} />
             </View>
 
-            <TouchableOpacity
-              style={styles.newChatButton}
-              onPress={createChat}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.newChatButton} onPress={createChat} activeOpacity={0.8}>
               <Ionicons name="add" size={21} color="#FFFFFF" />
               <AppText weight="bold" style={styles.newChatText}>
                 Nova conversa
@@ -216,62 +214,29 @@ export default function App() {
 
             <AppText style={styles.sectionLabel}>RECENTES</AppText>
 
-            <ScrollView
-              style={styles.chatList}
-              showsVerticalScrollIndicator={false}
-            >
+            <ScrollView style={styles.chatList} showsVerticalScrollIndicator={false}>
               {chats.map((chat) => (
                 <TouchableOpacity
                   key={chat.id}
                   onPress={() => selectChat(chat.id)}
-                  style={[
-                    styles.chatItem,
-                    activeId === chat.id && styles.chatItemActive,
-                  ]}
+                  style={[styles.chatItem, activeId === chat.id && styles.chatItemActive]}
                 >
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={17}
-                    color={
-                      activeId === chat.id
-                        ? COLORS.white
-                        : COLORS.muted
-                    }
-                  />
-                  <AppText
-                    numberOfLines={1}
-                    style={[
-                      styles.chatTitle,
-                      activeId === chat.id && styles.activeChatTitle,
-                    ]}
-                  >
+                  <Ionicons name="chatbubble-outline" size={17} color={activeId === chat.id ? COLORS.white : COLORS.muted} />
+                  <AppText numberOfLines={1} style={[styles.chatTitle, activeId === chat.id && styles.activeChatTitle]}>
                     {chat.title}
                   </AppText>
-                  {activeId === chat.id && (
-                    <View style={styles.activeDot} />
-                  )}
+                  {activeId === chat.id && <View style={styles.activeDot} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             <View style={styles.sidebarBottom}>
               <View style={styles.sidebarDivider} />
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => setSettingsOpen(!settingsOpen)}
-              >
-                <Ionicons
-                  name="settings-outline"
-                  size={19}
-                  color={COLORS.text}
-                />
+              <TouchableOpacity style={styles.menuItem} onPress={() => setSettingsOpen(!settingsOpen)}>
+                <Ionicons name="settings-outline" size={19} color={COLORS.text} />
                 <AppText style={styles.menuText}>Configurações</AppText>
                 <View style={{ flex: 1 }} />
-                <Ionicons
-                  name={settingsOpen ? "chevron-up" : "chevron-forward"}
-                  size={16}
-                  color={COLORS.muted}
-                />
+                <Ionicons name={settingsOpen ? "chevron-up" : "chevron-forward"} size={16} color={COLORS.muted} />
               </TouchableOpacity>
               <View style={styles.profileRow}>
                 <View style={styles.avatar}>
@@ -283,15 +248,9 @@ export default function App() {
                   <AppText weight="bold" style={{ fontSize: 13 }}>
                     Meu espaço
                   </AppText>
-                  <AppText style={styles.profileCaption}>
-                    VexAI · Pessoal
-                  </AppText>
+                  <AppText style={styles.profileCaption}>VexAI · Pessoal</AppText>
                 </View>
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={20}
-                  color={COLORS.muted}
-                />
+                <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.muted} />
               </View>
             </View>
           </View>
@@ -299,148 +258,77 @@ export default function App() {
 
         <View style={styles.main}>
           <View style={styles.topbar}>
-            {!sidebarOpen && (
-              <IconButton
-                name="menu-outline"
-                onPress={() => setSidebarOpen(true)}
-                size={23}
-              />
-            )}
+            {!sidebarOpen && <IconButton name="menu-outline" onPress={() => setSidebarOpen(true)} size={23} />}
 
             <View style={styles.topbarTitle}>
-              <AppText weight="bold" style={styles.topTitle}>
-                {settingsOpen ? "Configurações" : "VexAI"}
-              </AppText>
+              <AppText weight="bold" style={styles.topTitle}> {settingsOpen ? "Configurações" : "VexAI"} </AppText>
               <View style={styles.statusDot} />
               <AppText style={styles.statusText}>Preview</AppText>
             </View>
 
-            <IconButton
-              name="create-outline"
-              onPress={createChat}
-              size={21}
-            />
+            <IconButton name="create-outline" onPress={createChat} size={21} />
           </View>
 
           {settingsOpen ? (
             <ScrollView contentContainerStyle={styles.settingsContent}>
-              <AppText weight="bold" style={styles.pageHeading}>
-                Preferências
-              </AppText>
-              <AppText style={styles.pageDescription}>
-                Personalize sua experiência no VexAI.
-              </AppText>
+              <AppText weight="bold" style={styles.pageHeading}>Preferências</AppText>
+              <AppText style={styles.pageDescription}>Personalize sua experiência no VexAI.</AppText>
 
               <View style={styles.settingsCard}>
-                <Ionicons
-                  name="color-palette-outline"
-                  size={22}
-                  color={COLORS.red}
-                />
+                <Ionicons name="color-palette-outline" size={22} color={COLORS.red} />
                 <View style={{ flex: 1 }}>
                   <AppText weight="bold">Aparência</AppText>
-                  <AppText style={styles.settingsDescription}>
-                    Tema escuro · Preto e vermelho
-                  </AppText>
+                  <AppText style={styles.settingsDescription}>Tema escuro · Preto e vermelho</AppText>
                 </View>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={21}
-                  color={COLORS.red}
-                />
+                <Ionicons name="checkmark-circle" size={21} color={COLORS.red} />
               </View>
 
               <View style={styles.settingsCard}>
-                <Ionicons
-                  name="text-outline"
-                  size={22}
-                  color={COLORS.red}
-                />
+                <Ionicons name="text-outline" size={22} color={COLORS.red} />
                 <View style={{ flex: 1 }}>
                   <AppText weight="bold">Tipografia</AppText>
-                  <AppText style={styles.settingsDescription}>
-                    Alte Haas Grotesk
-                  </AppText>
+                  <AppText style={styles.settingsDescription}>Alte Haas Grotesk</AppText>
                 </View>
               </View>
 
               <View style={styles.settingsCard}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={22}
-                  color={COLORS.red}
-                />
+                <Ionicons name="shield-checkmark-outline" size={22} color={COLORS.red} />
                 <View style={{ flex: 1 }}>
                   <AppText weight="bold">Privacidade</AppText>
-                  <AppText style={styles.settingsDescription}>
-                    A conexão com serviços externos ainda não está ativa.
-                  </AppText>
+                  <AppText style={styles.settingsDescription}>A conexão com serviços externos ainda não está ativa.</AppText>
                 </View>
               </View>
             </ScrollView>
           ) : (
             <>
-              <ScrollView
-                key={activeId}
-                style={styles.conversation}
-                contentContainerStyle={styles.conversationContent}
-                showsVerticalScrollIndicator={false}
-              >
+              <ScrollView key={activeId} style={styles.conversation} contentContainerStyle={styles.conversationContent} showsVerticalScrollIndicator={false}>
                 {activeChat.messages.length === 0 ? (
                   <View style={styles.welcome}>
                     <View style={styles.welcomeIcon}>
                       <View style={styles.welcomeIconInner}>
-                        <AppText weight="bold" style={styles.welcomeV}>
-                          V
-                        </AppText>
+                        <AppText weight="bold" style={styles.welcomeV}>V</AppText>
                       </View>
                     </View>
 
-                    <AppText style={styles.eyebrow}>
-                      YOUR AI, YOUR SPACE
-                    </AppText>
+                    <AppText style={styles.eyebrow}>YOUR AI, YOUR SPACE</AppText>
 
                     <AppText weight="bold" style={styles.welcomeTitle}>
                       Inteligência sem{"\n"}
-                      <Text style={{ color: COLORS.red }}>
-                        complicação.
-                      </Text>
+                      <Text style={{ color: COLORS.red }}>complicação.</Text>
                     </AppText>
 
-                    <AppText style={styles.welcomeDescription}>
-                      O que vamos criar, descobrir ou resolver hoje?
-                    </AppText>
+                    <AppText style={styles.welcomeDescription}>O que vamos criar, descobrir ou resolver hoje?</AppText>
 
                     <View style={styles.suggestions}>
                       {SUGGESTIONS.map((item) => (
-                        <TouchableOpacity
-                          key={item.title}
-                          style={styles.suggestionCard}
-                          onPress={() => sendMessage(item.prompt)}
-                          activeOpacity={0.75}
-                        >
+                        <TouchableOpacity key={item.title} style={styles.suggestionCard} onPress={() => sendMessage(item.prompt)} activeOpacity={0.75}>
                           <View style={styles.suggestionIcon}>
-                            <Ionicons
-                              name={item.icon}
-                              size={19}
-                              color={COLORS.red}
-                            />
+                            <Ionicons name={item.icon} size={19} color={COLORS.red} />
                           </View>
-                          <AppText
-                            weight="bold"
-                            style={styles.suggestionTitle}
-                          >
-                            {item.title}
-                          </AppText>
-                          <AppText style={styles.suggestionDescription}>
-                            {item.description}
-                          </AppText>
+                          <AppText weight="bold" style={styles.suggestionTitle}>{item.title}</AppText>
+                          <AppText style={styles.suggestionDescription}>{item.description}</AppText>
                           <View style={styles.suggestionArrow}>
-                            <Ionicons
-                              name="arrow-up-outline"
-                              size={16}
-                              color={COLORS.muted}
-                            />
+                            <Ionicons name="arrow-up-outline" size={16} color={COLORS.muted} />
                           </View>
                         </TouchableOpacity>
                       ))}
@@ -451,82 +339,34 @@ export default function App() {
                     {activeChat.messages.map((message) => (
                       <View key={message.id} style={styles.messageBlock}>
                         <View style={styles.messageHeader}>
-                          <View
-                            style={[
-                              styles.messageAvatar,
-                              message.role === "assistant" &&
-                                styles.aiAvatar,
-                            ]}
-                          >
+                          <View style={[styles.messageAvatar, message.role === "assistant" && styles.aiAvatar]}>
                             {message.role === "assistant" ? (
-                              <AppText
-                                weight="bold"
-                                style={{ color: COLORS.red }}
-                              >
-                                V
-                              </AppText>
+                              <AppText weight="bold" style={{ color: COLORS.red }}>V</AppText>
                             ) : (
-                              <Ionicons
-                                name="person-outline"
-                                size={16}
-                                color={COLORS.text}
-                              />
+                              <Ionicons name="person-outline" size={16} color={COLORS.text} />
                             )}
                           </View>
-                          <AppText weight="bold" style={styles.messageAuthor}>
-                            {message.role === "assistant" ? "VexAI" : "Você"}
-                          </AppText>
+                          <AppText weight="bold" style={styles.messageAuthor}>{message.role === "assistant" ? "VexAI" : "Você"}</AppText>
                         </View>
-                        <AppText style={styles.messageText}>
-                          {message.content}
-                        </AppText>
+                        <AppText style={styles.messageText}>{message.content}</AppText>
                       </View>
                     ))}
                   </View>
                 )}
               </ScrollView>
 
-              <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-              >
+              <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
                 <View style={styles.composerArea}>
                   <View style={styles.composer}>
-                    <TextInput
-                      value={input}
-                      onChangeText={setInput}
-                      placeholder="Pergunte qualquer coisa..."
-                      placeholderTextColor="#686868"
-                      multiline
-                      maxLength={5000}
-                      style={styles.input}
-                      selectionColor={COLORS.red}
-                      onSubmitEditing={() => sendMessage()}
-                      blurOnSubmit={false}
-                    />
+                    <TextInput value={input} onChangeText={setInput} placeholder="Pergunte qualquer coisa..." placeholderTextColor="#686868" multiline maxLength={5000} style={styles.input} selectionColor={COLORS.red} onSubmitEditing={() => sendMessage()} blurOnSubmit={false} />
                     <View style={styles.composerBottom}>
-                      <AppText style={styles.composerHint}>
-                        VexAI · Modo demonstração
-                      </AppText>
-                      <TouchableOpacity
-                        onPress={() => sendMessage()}
-                        disabled={!input.trim()}
-                        style={[
-                          styles.sendButton,
-                          !input.trim() && styles.sendButtonDisabled,
-                        ]}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name="arrow-up"
-                          size={20}
-                          color="#FFFFFF"
-                        />
+                      <AppText style={styles.composerHint}>VexAI · Modo demonstração</AppText>
+                      <TouchableOpacity onPress={() => sendMessage()} disabled={!input.trim()} style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]} activeOpacity={0.8}>
+                        <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <AppText style={styles.disclaimer}>
-                    A IA pode cometer erros. Confira informações importantes.
-                  </AppText>
+                  <AppText style={styles.disclaimer}>A IA pode cometer erros. Confira informações importantes.</AppText>
                 </View>
               </KeyboardAvoidingView>
             </>
